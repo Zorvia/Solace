@@ -1,74 +1,25 @@
-/*
-  Stockfish, a UCI chess playing engine derived from Glaurung 2.1
-  Copyright (C) 2004-2026 The Stockfish developers (see AUTHORS file)
-
-  Stockfish is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  Stockfish is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-#ifndef EVALUATE_H_INCLUDED
-#define EVALUATE_H_INCLUDED
-
-#include <string>
-
-#include "types.h"
-
-namespace Stockfish {
-
-class Position;
-
-namespace Eval {
-
-// The default net name MUST follow the format nn-[SHA256 first 12 digits].nnue
-// for the build process (profile-build and fishtest) to work. Do not change the
-// name of the macro or the location where this macro is defined, as it is used
-// in the Makefile/Fishtest.
-#define EvalFileDefaultNameBig "nn-5227780996d3.nnue"
-#define EvalFileDefaultNameSmall "nn-37f18f62d772.nnue"
-
-// ── Solace aggression control ────────────────────────────────────────────────
-// AggressionMode selects which aggression mechanism is active.
-//   OFF   — identical to baseline Stockfish evaluation (default).
-//   PARAM — runtime-tunable evaluation bias via set_aggression(0..100).
-//   NNUE  — reserved for a future aggression-trained NNUE net.
-enum class AggressionMode { OFF, PARAM, NNUE };
-
-// Set/get the engine-wide aggression level used when mode == PARAM.
-// level must be in [0, 100]; values outside that range are clamped.
-// Thread-safe (backed by std::atomic).
-void set_aggression(int level);
-int  get_aggression();
-void set_aggression_mode(AggressionMode mode);
-AggressionMode get_aggression_mode();
-// ── End Solace aggression control ────────────────────────────────────────────
-
-namespace NNUE {
-struct Networks;
-struct AccumulatorCaches;
-class AccumulatorStack;
-}
-
-std::string trace(Position& pos, const Eval::NNUE::Networks& networks);
-
-int   simple_eval(const Position& pos);
-bool  use_smallnet(const Position& pos);
-Value evaluate(const NNUE::Networks&          networks,
-               const Position&                pos,
-               Eval::NNUE::AccumulatorStack&  accumulators,
-               Eval::NNUE::AccumulatorCaches& caches,
-               int                            optimism);
-}  // namespace Eval
-
-}  // namespace Stockfish
-
-#endif  // #ifndef EVALUATE_H_INCLUDED
+--- /tmp/sf-orig/Stockfish-master/src/evaluate.h	2026-02-18 20:46:57.000000000 +0000
++++ /home/claude/Stockfish-master/src/evaluate.h	2026-02-22 07:25:19.672763463 +0000
+@@ -36,6 +36,22 @@
+ #define EvalFileDefaultNameBig "nn-5227780996d3.nnue"
+ #define EvalFileDefaultNameSmall "nn-37f18f62d772.nnue"
+ 
++// ── Solace aggression control ────────────────────────────────────────────────
++// AggressionMode selects which aggression mechanism is active.
++//   OFF   — identical to baseline Stockfish evaluation (default).
++//   PARAM — runtime-tunable evaluation bias via set_aggression(0..100).
++//   NNUE  — reserved for a future aggression-trained NNUE net.
++enum class AggressionMode { OFF, PARAM, NNUE };
++
++// Set/get the engine-wide aggression level used when mode == PARAM.
++// level must be in [0, 100]; values outside that range are clamped.
++// Thread-safe (backed by std::atomic).
++void set_aggression(int level);
++int  get_aggression();
++void set_aggression_mode(AggressionMode mode);
++AggressionMode get_aggression_mode();
++// ── End Solace aggression control ────────────────────────────────────────────
++
+ namespace NNUE {
+ struct Networks;
+ struct AccumulatorCaches;
