@@ -30,6 +30,7 @@
 #include <utility>
 #include <vector>
 
+#include "evaluate.h"
 #include "history.h"
 #include "nnue/network.h"
 #include "numa.h"
