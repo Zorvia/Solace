@@ -155,6 +155,3 @@ Solace/
 
 **© 2025-2026 Zorvia. All Rights Reserved.**
 
-
-Do you want me to do that next?
-```
