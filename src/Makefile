@@ -997,7 +997,19 @@ endif
 	icx-profile-use icx-profile-make \
 	gcc-profile-use gcc-profile-make \
 	clang-profile-use clang-profile-make FORCE \
-	format analyze
+	format analyze \
+	solace-build solace-bench
+
+# Solace build: skips embedded NNUE download; net loaded at runtime via EvalFile UCI option.
+# Usage: make solace-build ARCH=x86-64
+solace-build: config-sanity
+	$(MAKE) ARCH=$(ARCH) COMP=$(COMP) EXE=solace EXTRACXXFLAGS="-DNNUE_EMBEDDING_OFF" all
+
+# Run Solace baseline benchmark and write a timestamped log to ../scripts/bench_logs/.
+# Usage: make solace-bench ARCH=x86-64
+solace-bench: solace-build
+	@mkdir -p ../scripts/bench_logs
+	@../scripts/solace_bench.sh ./solace ../scripts/bench_logs
 
 analyze: net config-sanity objclean
 	$(MAKE) -k ARCH=$(ARCH) COMP=$(COMP) $(OBJS)
