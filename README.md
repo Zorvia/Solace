@@ -1,161 +1,160 @@
 <div align="center">
 
-  [![Stockfish][stockfish128-logo]][website-link]
+<img src="assets/solace.svg" alt="Solace Logo" width="100">
 
-  <h3>Stockfish</h3>
+# Solace
 
-  A free and strong UCI chess engine.
-  <br>
-  <strong>[Explore Stockfish docs »][wiki-link]</strong>
-  <br>
-  <br>
-  [Report bug][issue-link]
-  ·
-  [Open a discussion][discussions-link]
-  ·
-  [Discord][discord-link]
-  ·
-  [Blog][website-blog-link]
+**An NNUE-powered, ultra-aggressive UCI chess engine built on Stockfish architecture. Structured aggression meets measurable strength.**
 
-  [![Build][build-badge]][build-link]
-  [![License][license-badge]][license-link]
-  <br>
-  [![Release][release-badge]][release-link]
-  [![Commits][commits-badge]][commits-link]
-  <br>
-  [![Website][website-badge]][website-link]
-  [![Fishtest][fishtest-badge]][fishtest-link]
-  [![Discord][discord-badge]][discord-link]
+---
 
+<p>
+<img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Zorvia/Solace/build.yml?style=for-the-badge&logo=github&logoColor=white&color=0a0e14&label=build">
+<img alt="Version" src="https://img.shields.io/github/v/release/Zorvia/Solace?style=for-the-badge&logo=semantic-release&logoColor=white&color=0a0e14">
+<img alt="License" src="https://img.shields.io/github/license/Zorvia/Solace?style=for-the-badge&logo=open-source-initiative&logoColor=white&color=020617">
+<img alt="Language" src="https://img.shields.io/github/languages/top/Zorvia/Solace?style=for-the-badge&logo=c%2B%2B&logoColor=white&color=0a0e14">
+<img alt="Contributors" src="https://img.shields.io/github/contributors/Zorvia/Solace?style=for-the-badge&logo=github&logoColor=white&color=0a0e14">
+</p>
 </div>
+
+---
 
 ## Overview
 
-[Stockfish][website-link] is a **free and strong UCI chess engine** derived from
-Glaurung 2.1 that analyzes chess positions and computes the optimal moves.
+Solace is a **deterministic, NNUE-powered UCI chess engine** designed for:
 
-Stockfish **does not include a graphical user interface** (GUI) that is required
-to display a chessboard and to make it easy to input moves. These GUIs are
-developed independently from Stockfish and are available online. **Read the
-documentation for your GUI** of choice for information about how to use
-Stockfish with it.
+- **Aggressive Initiative:** Prefers dynamic imbalance and king pressure over static material.  
+- **Structured Sacrifices:** Evaluates risk vs. compensation statistically.  
+- **Performance & Accuracy:** Deterministic search, fully benchmarked, optimized in C++.
 
-See also the Stockfish [documentation][wiki-usage-link] for further usage help.
+Solace is ideal for players and researchers exploring stylistic engine bias and neural evaluation tuning.
 
-## Files
+---
 
-This distribution of Stockfish consists of the following files:
+## Features
 
-  * [README.md][readme-link], the file you are currently reading.
+- **NNUE Evaluation:** Neural-network-driven position scoring.  
+- **Dynamic Imbalance Handling:** Sacrifices and attacks calculated for maximum effectiveness.  
+- **UCI-Compatible:** Works with any UCI-compliant GUI.  
+- **Open Source (GPLv3):** Full source code, auditable and modifiable.  
+- **Deterministic & Benchmarkable:** Reproducible search results.  
+- **High Performance:** Optimized for speed and efficiency in C++.
 
-  * [Copying.txt][license-link], a text file containing the GNU General Public
-    License version 3.
+---
 
-  * [AUTHORS][authors-link], a text file with the list of authors for the project.
+## Quick Start
 
-  * [src][src-link], a subdirectory containing the full source code, including a
-    Makefile that can be used to compile Stockfish on Unix-like systems.
+### Clone & Build
 
-  * a file with the .nnue extension, storing the neural network for the NNUE
-    evaluation. Binary distributions will have this file embedded.
+```bash
+git clone https://github.com/Zorvia/Solace.git
+cd Solace/src
+make -j profile-build
+````
+
+### Run
+
+```bash
+./solace
+uci
+```
+
+Expected output:
+
+```text
+id name Solace
+uciok
+```
+
+> Solace has no built-in GUI; use any UCI-compatible interface.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Position] --> B[Search]
+    B --> C[NNUE Evaluation]
+    C --> D[Aggression Bias]
+    D --> E[Move Selection]
+    E --> B
+```
+
+* Evaluates positions prioritizing **initiative, king pressure, mobility, space, and long-term compensation**.
+* Aggression is calculated and statistical, not random.
+
+---
+
+## Aggression Model
+
+```mermaid
+graph TD
+    A[Material] -->|Balanced| B[Traditional Engine]
+    A -->|Dynamic Imbalance| C[Solace]
+    C --> D[Increased Sacrifice Rate]
+    C --> E[Higher King Attack Score]
+    C --> F[Lower Draw Tendency]
+```
+
+* Aggression is balanced with measurable statistical results.
+* Sacrifices are executed only when pressure outweighs material.
+
+---
+
+## Validation Pipeline
+
+```mermaid
+flowchart TD
+    A[Build] --> B[Unit Tests]
+    B --> C[Self-Play]
+    C --> D[Match vs Baseline]
+    D --> E[Elo Analysis]
+    E --> F{Improvement?}
+    F -- Yes --> G[Promote Net]
+    F -- No --> H[Refine]
+```
+
+* Each update is compiled, stress-tested, and evaluated through Elo self-play.
+* Strength and aggression are validated, ensuring reliability.
+
+---
+
+## Project Structure
+
+```
+Solace/
+├── assets/          # Logos, images, SVGs
+├── src/             # Engine source code
+├── tests/           # Unit tests and validation scripts
+├── examples/        # Sample configuration and run scripts
+├── docs/            # Documentation
+├── Makefile
+└── README.md
+```
+
+---
 
 ## Contributing
 
-__See [Contributing Guide](CONTRIBUTING.md).__
+* Follow [CONTRIBUTING.md](CONTRIBUTING.md).
+* Clear, readable commits and educational clarity are prioritized.
+* All contributions welcome.
 
-### Donating hardware
+---
 
-Improving Stockfish requires a massive amount of testing. You can donate your
-hardware resources by installing the [Fishtest Worker][worker-link] and viewing
-the current tests on [Fishtest][fishtest-link].
+## License
 
-### Improving the code
+**GPLv3** — See [LICENSE](LICENSE) for full terms.
 
-In the [chessprogramming wiki][programming-link], many techniques used in
-Stockfish are explained with a lot of background information.
-The [section on Stockfish][programmingsf-link] describes many features
-and techniques used by Stockfish. However, it is generic rather than
-focused on Stockfish's precise implementation.
+---
 
-The engine testing is done on [Fishtest][fishtest-link].
-If you want to help improve Stockfish, please read this [guideline][guideline-link]
-first, where the basics of Stockfish development are explained.
+## Version
 
-Discussions about Stockfish take place these days mainly in the Stockfish
-[Discord server][discord-link]. This is also the best place to ask questions
-about the codebase and how to improve it.
+**v1.0.0** (Alpha) — Fully functional but may contain minor issues.
 
-## Compiling Stockfish
+**© 2025-2026 Zorvia. All Rights Reserved.**
 
-Stockfish has support for 32 or 64-bit CPUs, certain hardware instructions,
-big-endian machines such as Power PC, and other platforms.
 
-On Unix-like systems, it should be easy to compile Stockfish directly from the
-source code with the included Makefile in the folder `src`. In general, it is
-recommended to run `make help` to see a list of make targets with corresponding
-descriptions. An example suitable for most Intel and AMD chips:
-
+Do you want me to do that next?
 ```
-cd src
-make -j profile-build
-```
-
-Detailed compilation instructions for all platforms can be found in our
-[documentation][wiki-compile-link]. Our wiki also has information about
-the [UCI commands][wiki-uci-link] supported by Stockfish.
-
-## Terms of use
-
-Stockfish is free and distributed under the
-[**GNU General Public License version 3**][license-link] (GPL v3). Essentially,
-this means you are free to do almost exactly what you want with the program,
-including distributing it among your friends, making it available for download
-from your website, selling it (either by itself or as part of some bigger
-software package), or using it as the starting point for a software project of
-your own.
-
-The only real limitation is that whenever you distribute Stockfish in some way,
-you MUST always include the license and the full source code (or a pointer to
-where the source code can be found) to generate the exact binary you are
-distributing. If you make any changes to the source code, these changes must
-also be made available under GPL v3.
-
-## Acknowledgements
-
-Stockfish uses neural networks trained on [data provided by the Leela Chess Zero
-project][lc0-data-link], which is made available under the [Open Database License][odbl-link] (ODbL).
-
-
-[authors-link]:       https://github.com/official-stockfish/Stockfish/blob/master/AUTHORS
-[build-link]:         https://github.com/official-stockfish/Stockfish/actions/workflows/stockfish.yml
-[commits-link]:       https://github.com/official-stockfish/Stockfish/commits/master
-[discord-link]:       https://discord.gg/GWDRS3kU6R
-[issue-link]:         https://github.com/official-stockfish/Stockfish/issues/new?assignees=&labels=&template=BUG-REPORT.yml
-[discussions-link]:   https://github.com/official-stockfish/Stockfish/discussions/new
-[fishtest-link]:      https://tests.stockfishchess.org/tests
-[guideline-link]:     https://github.com/official-stockfish/fishtest/wiki/Creating-my-first-test
-[license-link]:       https://github.com/official-stockfish/Stockfish/blob/master/Copying.txt
-[programming-link]:   https://www.chessprogramming.org/Main_Page
-[programmingsf-link]: https://www.chessprogramming.org/Stockfish
-[readme-link]:        https://github.com/official-stockfish/Stockfish/blob/master/README.md
-[release-link]:       https://github.com/official-stockfish/Stockfish/releases/latest
-[src-link]:           https://github.com/official-stockfish/Stockfish/tree/master/src
-[stockfish128-logo]:  https://stockfishchess.org/images/logo/icon_128x128.png
-[uci-link]:           https://backscattering.de/chess/uci/
-[website-link]:       https://stockfishchess.org
-[website-blog-link]:  https://stockfishchess.org/blog/
-[wiki-link]:          https://github.com/official-stockfish/Stockfish/wiki
-[wiki-compile-link]:  https://github.com/official-stockfish/Stockfish/wiki/Compiling-from-source
-[wiki-uci-link]:      https://github.com/official-stockfish/Stockfish/wiki/UCI-&-Commands
-[wiki-usage-link]:    https://github.com/official-stockfish/Stockfish/wiki/Download-and-usage
-[worker-link]:        https://github.com/official-stockfish/fishtest/wiki/Running-the-worker
-[lc0-data-link]:      https://storage.lczero.org/files/training_data
-[odbl-link]:          https://opendatacommons.org/licenses/odbl/odbl-10.txt
-
-[build-badge]:        https://img.shields.io/github/actions/workflow/status/official-stockfish/Stockfish/stockfish.yml?branch=master&style=for-the-badge&label=stockfish&logo=github
-[commits-badge]:      https://img.shields.io/github/commits-since/official-stockfish/Stockfish/latest?style=for-the-badge
-[discord-badge]:      https://img.shields.io/discord/435943710472011776?style=for-the-badge&label=discord&logo=Discord
-[fishtest-badge]:     https://img.shields.io/website?style=for-the-badge&down_color=red&down_message=Offline&label=Fishtest&up_color=success&up_message=Online&url=https%3A%2F%2Ftests.stockfishchess.org%2Ftests%2Ffinished
-[license-badge]:      https://img.shields.io/github/license/official-stockfish/Stockfish?style=for-the-badge&label=license&color=success
-[release-badge]:      https://img.shields.io/github/v/release/official-stockfish/Stockfish?style=for-the-badge&label=official%20release
-[website-badge]:      https://img.shields.io/website?style=for-the-badge&down_color=red&down_message=Offline&label=website&up_color=success&up_message=Online&url=https%3A%2F%2Fstockfishchess.org
