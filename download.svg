@@ -1,0 +1,12 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Circle background -->
+  <circle cx="100" cy="100" r="95" fill="#2B2B2B" stroke="#6D7592" stroke-width="6"></circle>
+
+  <!-- Geometric King / Knight shape -->
+  <polygon points="70,140 130,140 115,100 85,100" fill="#FFFFFF"></polygon>
+  <polygon points="85,100 115,100 100,60" fill="#FFFFFF"></polygon>
+  <polygon points="100,60 90,50 110,50" fill="#FFFFFF"></polygon>
+  
+  <!-- Base line to anchor piece -->
+  <rect x="70" y="140" width="60" height="10" fill="#FFFFFF"></rect>
+</svg>
