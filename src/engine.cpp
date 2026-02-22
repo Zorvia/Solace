@@ -144,6 +144,33 @@ Engine::Engine(std::optional<std::string> path) :
           return std::nullopt;
       }));
 
+    // ── Solace aggression options ─────────────────────────────────────────────
+    // SolaceAggressionMode: selects the aggression mechanism.
+    //   Off   — identical to baseline Stockfish (default).
+    //   Param — runtime-tunable evaluation bias via SolaceAggressionLevel.
+    //   NNUE  — reserved for a future aggression-trained net (no-op for now).
+    options.add(  //
+      "SolaceAggressionMode",
+      Option("Off Param NNUE", "Off", [](const Option& o) {
+          const std::string& v = o;
+          if (v == "Param")
+              Eval::set_aggression_mode(Eval::AggressionMode::PARAM);
+          else if (v == "NNUE")
+              Eval::set_aggression_mode(Eval::AggressionMode::NNUE);
+          else
+              Eval::set_aggression_mode(Eval::AggressionMode::OFF);
+          return std::nullopt;
+      }));
+
+    // SolaceAggressionLevel: 0 (baseline) to 100 (maximum aggression).
+    // Only effective when SolaceAggressionMode = Param.
+    options.add(  //
+      "SolaceAggressionLevel", Option(0, 0, 100, [](const Option& o) {
+          Eval::set_aggression(o);
+          return std::nullopt;
+      }));
+    // ── End Solace aggression options ─────────────────────────────────────────
+
     threads.clear();
     threads.ensure_network_replicated();
     resize_threads();
