@@ -262,6 +262,27 @@ class NullSearchManager: public ISearchManager {
     void check_time(Search::Worker&) override {}
 };
 
+// ── Solace aggression instrumentation ────────────────────────────────────────
+// Counters accumulated per Worker per search call. All per-thread, no locking.
+// The main thread collects totals across all workers before emitting stats.
+struct SolaceAggrStats {
+    uint64_t totalMoves  = 0;  // moves instrumented by this thread
+    uint64_t sacrifices  = 0;  // captures where SEE < 0 (material given away)
+    uint64_t kingAttacks = 0;  // moves landing within Chebyshev-dist 2 of opp king
+    uint64_t drawScores  = 0;  // positions where |eval| < 10cp (draw-vicinity)
+
+    void reset() { totalMoves = sacrifices = kingAttacks = drawScores = 0; }
+
+    SolaceAggrStats& operator+=(const SolaceAggrStats& o) {
+        totalMoves  += o.totalMoves;
+        sacrifices  += o.sacrifices;
+        kingAttacks += o.kingAttacks;
+        drawScores  += o.drawScores;
+        return *this;
+    }
+};
+// ── End Solace aggression instrumentation ────────────────────────────────────
+
 // Search::Worker is the class that does the actual search.
 // It is instantiated once per thread, and it is responsible for keeping track
 // of the search history, and storing data required for the search.
@@ -296,6 +317,9 @@ class Worker {
 
     TTMoveHistory    ttMoveHistory;
     SharedHistories& sharedHistory;
+
+    // Solace: per-thread aggression counters; reset at each search start.
+    SolaceAggrStats aggrStats;
 
    private:
     void iterative_deepening();
