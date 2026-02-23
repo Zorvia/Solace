@@ -4,7 +4,7 @@
 
 # Solace
 
-**An NNUE-powered, ultra-aggressive UCI chess engine built on Stockfish architecture. Structured aggression meets measurable strength.**
+**An NNUE-powered, ultra-aggressive UCI chess engine built on the architecture of Stockfish. Structured aggression meets measurable strength.**
 
 ---
 
@@ -21,24 +21,43 @@
 
 ## Overview
 
-Solace is a **deterministic, NNUE-powered UCI chess engine** designed for:
+Solace is a **deterministic, NNUE-enhanced UCI chess engine** engineered for controlled, statistical aggression.
 
-- **Aggressive Initiative:** Prefers dynamic imbalance and king pressure over static material.  
-- **Structured Sacrifices:** Evaluates risk vs. compensation statistically.  
-- **Performance & Accuracy:** Deterministic search, fully benchmarked, optimized in C++.
+It extends the proven search and evaluation framework of Stockfish while introducing measurable attacking bias through:
 
-Solace is ideal for players and researchers exploring stylistic engine bias and neural evaluation tuning.
+* **Evaluation optimism under imbalance**
+* **Search-depth bonuses for king pressure**
+* **Optional aggression-trained NNUE networks**
+* **Per-search aggression instrumentation**
+
+At default settings, Solace is **bit-for-bit identical** to upstream Stockfish.
 
 ---
 
-## Features
+## Core Philosophy
 
-- **NNUE Evaluation:** Neural-network-driven position scoring.  
-- **Dynamic Imbalance Handling:** Sacrifices and attacks calculated for maximum effectiveness.  
-- **UCI-Compatible:** Works with any UCI-compliant GUI.  
-- **Open Source (GPLv3):** Full source code, auditable and modifiable.  
-- **Deterministic & Benchmarkable:** Reproducible search results.  
-- **High Performance:** Optimized for speed and efficiency in C++.
+Solace does not play randomly aggressive chess.
+
+It implements:
+
+* **Quantified Sacrifice Modeling** — Sacrifices must statistically justify long-term compensation.
+* **King-Proximity Search Bias** — Tactical pressure near the enemy king receives deeper exploration.
+* **Draw Resistance Control** — Reduced early simplification bias in dynamically rich positions.
+* **Deterministic Behavior** — No stochastic style injection. Every result is reproducible.
+
+Aggression is parameterized, measurable, and reversible.
+
+---
+
+## Feature Set
+
+* **Full UCI Compatibility**
+* **Parametric Aggression Mode (0–100 intensity)**
+* **Custom Aggression-Trained NNUE Support**
+* **Search Heuristic Modifications (LMR + Capture History Bias)**
+* **Structured Telemetry (`solace_aggr` stats output)**
+* **Benchmark + Elo Validation Pipeline**
+* **GPLv3 Open Source**
 
 ---
 
@@ -49,8 +68,10 @@ Solace is ideal for players and researchers exploring stylistic engine bias and 
 ```bash
 git clone https://github.com/Zorvia/Solace.git
 cd Solace/src
-make -j profile-build
-````
+
+# AVX2 recommended
+EXTRACXXFLAGS="-DNNUE_EMBEDDING_OFF" make ARCH=x86-64-avx2 EXE=solace -j$(nproc)
+```
 
 ### Run
 
@@ -59,46 +80,96 @@ make -j profile-build
 uci
 ```
 
-Expected output:
+Expected:
 
 ```text
 id name Solace
 uciok
 ```
 
-> Solace has no built-in GUI; use any UCI-compatible interface.
+Use any UCI-compatible GUI.
 
 ---
 
-## Architecture
+## Aggression Controls (UCI)
+
+| Option                  | Type       | Default | Description               |
+| ----------------------- | ---------- | ------- | ------------------------- |
+| `SolaceAggressionMode`  | combo      | Off     | Off / Param / NNUE        |
+| `SolaceAggressionLevel` | spin 0–100 | 0       | Intensity when mode=Param |
+| `SolaceAggressionNet`   | string     | empty   | Custom `.nnue` file       |
+
+### Example: Structured Aggression
+
+```
+setoption name SolaceAggressionMode value Param
+setoption name SolaceAggressionLevel value 75
+```
+
+### Example: Aggression-Trained Network
+
+```
+setoption name EvalFile value /path/to/base.nnue
+setoption name SolaceAggressionMode value NNUE
+setoption name SolaceAggressionNet value /path/to/nn-solace.nnue
+```
+
+---
+
+## Engine Architecture
 
 ```mermaid
 flowchart LR
-    A[Position] --> B[Search]
+    A[Position] --> B[Alpha-Beta Search]
     B --> C[NNUE Evaluation]
-    C --> D[Aggression Bias]
-    D --> E[Move Selection]
+    C --> D[Aggression Layer]
+    D --> E[Move Ordering + Heuristics]
     E --> B
 ```
 
-* Evaluates positions prioritizing **initiative, king pressure, mobility, space, and long-term compensation**.
-* Aggression is calculated and statistical, not random.
+Search remains classical alpha-beta with pruning.
+Aggression influences evaluation scaling and move prioritization.
 
 ---
 
-## Aggression Model
+## Telemetry & Instrumentation
 
-```mermaid
-graph TD
-    A[Material] -->|Balanced| B[Traditional Engine]
-    A -->|Dynamic Imbalance| C[Solace]
-    C --> D[Increased Sacrifice Rate]
-    C --> E[Higher King Attack Score]
-    C --> F[Lower Draw Tendency]
+When aggression is enabled, Solace emits structured metrics:
+
+```
+info string solace_aggr total_moves 18420 sacrifices 312 sac_per_1k 16 \
+  king_attacks 1104 king_per_1k 59 draw_vicinity 420 aggr_level 75
 ```
 
-* Aggression is balanced with measurable statistical results.
-* Sacrifices are executed only when pressure outweighs material.
+Metrics include:
+
+* Sacrifices per 1000 moves
+* King attack frequency
+* Draw proximity weighting
+* Active aggression level
+
+This allows controlled experimentation and regression tracking.
+
+---
+
+## Training Pipeline
+
+Solace supports training custom aggression-specialized networks.
+
+### Dataset Source
+
+Aggressive games filtered from high-level online databases
+(Gambits, Sicilian Dragon, King’s Indian structures, etc.)
+
+### Training
+
+* FEN extraction with outcome labels
+* Imbalance-weighted loss function
+* Pure NumPy training loop (CPU-compatible)
+* Export to fully valid `.nnue` binary
+* Compatible with nnue-pytorch for GPU-scale runs
+
+All outputs are hash-verified and Stockfish-compatible.
 
 ---
 
@@ -106,17 +177,24 @@ graph TD
 
 ```mermaid
 flowchart TD
-    A[Build] --> B[Unit Tests]
-    B --> C[Self-Play]
-    C --> D[Match vs Baseline]
-    D --> E[Elo Analysis]
-    E --> F{Improvement?}
-    F -- Yes --> G[Promote Net]
-    F -- No --> H[Refine]
+    A[Compile] --> B[Perft Check]
+    B --> C[Bench NPS]
+    C --> D[Self-Play]
+    D --> E[Match vs Baseline]
+    E --> F[Elo + LOS Analysis]
+    F --> G{Δelo ≥ Threshold?}
+    G -- Yes --> H[Promote]
+    G -- No --> I[Refine]
 ```
 
-* Each update is compiled, stress-tested, and evaluated through Elo self-play.
-* Strength and aggression are validated, ensuring reliability.
+Every modification is:
+
+* Perft validated
+* Bench validated
+* Elo tested
+* Statistically gated
+
+No regression is merged without passing strength criteria.
 
 ---
 
@@ -124,34 +202,37 @@ flowchart TD
 
 ```
 Solace/
-├── assets/          # Logos, images, SVGs
-├── src/             # Engine source code
-├── tests/           # Unit tests and validation scripts
-├── examples/        # Sample configuration and run scripts
-├── docs/            # Documentation
+├── assets/                 # Logos and visual assets
+├── src/                    # Engine source
+├── scripts/                # Training, benchmarking, Elo tools
+├── data/                   # Training datasets
+├── checkpoints/            # NNUE checkpoints
+├── logs/                   # Benchmark logs
+├── match_results/          # Elo match output
 ├── Makefile
 └── README.md
 ```
 
 ---
 
-## Contributing
+## Baseline Guarantee
 
-* Follow [CONTRIBUTING.md](CONTRIBUTING.md).
-* Clear, readable commits and educational clarity are prioritized.
-* All contributions welcome.
+With:
+
+```
+setoption name SolaceAggressionMode value Off
+```
+
+Solace produces **identical behavior** to the upstream version of Stockfish it was forked from.
+
+No hidden heuristics. No strength regression at default.
 
 ---
 
 ## License
 
-**GPLv3** — See [LICENSE](LICENSE) for full terms.
+GPLv3 — inherits from Stockfish.
+
+See `COPYING`.
 
 ---
-
-## Version
-
-**v1.0.0** (Alpha) — Fully functional but may contain minor issues.
-
-**© 2025-2026 Zorvia. All Rights Reserved.**
-
