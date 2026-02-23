@@ -148,17 +148,29 @@ Engine::Engine(std::optional<std::string> path) :
     // SolaceAggressionMode: selects the aggression mechanism.
     //   Off   — identical to baseline Stockfish (default).
     //   Param — runtime-tunable evaluation bias via SolaceAggressionLevel.
-    //   NNUE  — reserved for a future aggression-trained net (no-op for now).
+    //   NNUE  — load an aggression-trained net from SolaceAggressionNet path.
     options.add(  //
       "SolaceAggressionMode",
-      Option("Off Param NNUE", "Off", [](const Option& o) {
+      Option("Off Param NNUE", "Off", [this](const Option& o) {
           const std::string& v = o;
           if (v == "Param")
+          {
               Eval::set_aggression_mode(Eval::AggressionMode::PARAM);
+          }
           else if (v == "NNUE")
+          {
               Eval::set_aggression_mode(Eval::AggressionMode::NNUE);
+              // If a Solace net path is already set, load it immediately.
+              const std::string netPath = options.count("SolaceAggressionNet")
+                                          ? std::string(options["SolaceAggressionNet"])
+                                          : std::string();
+              if (!netPath.empty() && netPath != "<empty>")
+                  load_big_network(netPath);
+          }
           else
+          {
               Eval::set_aggression_mode(Eval::AggressionMode::OFF);
+          }
           return std::nullopt;
       }));
 
@@ -167,6 +179,19 @@ Engine::Engine(std::optional<std::string> path) :
     options.add(  //
       "SolaceAggressionLevel", Option(0, 0, 100, [](const Option& o) {
           Eval::set_aggression(o);
+          return std::nullopt;
+      }));
+
+    // SolaceAggressionNet: path to an aggression-trained .nnue file.
+    // Setting this option while SolaceAggressionMode = NNUE immediately
+    // loads the net as the big evaluation network.
+    // Setting it while mode is Off or Param stores the path for later use.
+    options.add(  //
+      "SolaceAggressionNet", Option("", [this](const Option& o) {
+          const std::string netPath = o;
+          if (!netPath.empty() && netPath != "<empty>"
+              && Eval::get_aggression_mode() == Eval::AggressionMode::NNUE)
+              load_big_network(netPath);
           return std::nullopt;
       }));
     // ── End Solace aggression options ─────────────────────────────────────────
