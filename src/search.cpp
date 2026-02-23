@@ -186,9 +186,12 @@ void Search::Worker::start_searching() {
     // Non-main threads go directly to iterative_deepening()
     if (!is_mainthread())
     {
+        aggrStats.reset();
         iterative_deepening();
         return;
     }
+
+    aggrStats.reset();
 
     main_manager()->tm.init(limits, rootPos.side_to_move(), rootPos.game_ply(), options,
                             main_manager()->originalTimeAdjust);
@@ -249,6 +252,31 @@ void Search::Worker::start_searching() {
         ponder = UCIEngine::move(bestThread->rootMoves[0].pv[1], rootPos.is_chess960());
 
     auto bestmove = UCIEngine::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
+
+    // ── Solace aggression stats emit ─────────────────────────────────────────
+    if (Eval::get_aggression_mode() != Eval::AggressionMode::OFF)
+    {
+        SolaceAggrStats total;
+        for (const auto& th : threads)
+            total += th->worker->aggrStats;
+
+        if (total.totalMoves > 0)
+        {
+            double sacPer1k   = 1000.0 * double(total.sacrifices)  / double(total.totalMoves);
+            double kingPer1k  = 1000.0 * double(total.kingAttacks) / double(total.totalMoves);
+            sync_cout << "info string solace_aggr"
+                      << " total_moves "  << total.totalMoves
+                      << " sacrifices "   << total.sacrifices
+                      << " sac_per_1k "   << int(sacPer1k + 0.5)
+                      << " king_attacks " << total.kingAttacks
+                      << " king_per_1k "  << int(kingPer1k + 0.5)
+                      << " draw_vicinity " << total.drawScores
+                      << " aggr_level "   << Eval::get_aggression()
+                      << sync_endl;
+        }
+    }
+    // ── End Solace aggression stats emit ─────────────────────────────────────
+
     main_manager()->updates.onBestmove(bestmove, ponder);
 }
 
@@ -551,6 +579,18 @@ void Search::Worker::do_move(
     bool capture = pos.capture_stage(move);
     // Preferable over fetch_add to avoid locking instructions
     nodes.store(nodes.load(std::memory_order_relaxed) + 1, std::memory_order_relaxed);
+
+    // ── Solace aggression instrumentation ────────────────────────────────────
+    if (Eval::get_aggression_mode() != Eval::AggressionMode::OFF)
+    {
+        ++aggrStats.totalMoves;
+        if (capture && !pos.see_ge(move, 0))
+            ++aggrStats.sacrifices;
+        Square oppKing = pos.square<KING>(~pos.side_to_move());
+        if (distance<Square>(move.to_sq(), oppKing) <= 2)
+            ++aggrStats.kingAttacks;
+    }
+    // ── End Solace instrumentation ────────────────────────────────────────────
 
     auto [dirtyPiece, dirtyThreats] = accumulatorStack.push();
     pos.do_move(move, st, givesCheck, dirtyPiece, dirtyThreats, &tt, &sharedHistory);
@@ -1221,6 +1261,29 @@ moves_loop:  // When in check, search starts here
         // Decrease/increase reduction for moves with a good/bad history
         r -= ss->statScore * 454 / 4096;
 
+        // ── Solace: reduce LMR for king-attack and sacrifice moves ───────────
+        // When mode=PARAM, moves landing within Chebyshev-2 of the opponent
+        // king receive a reduction discount proportional to the aggression level.
+        // This makes the engine search attacking lines one ply deeper without
+        // altering the baseline when aggression is off.
+        if (Eval::get_aggression_mode() == Eval::AggressionMode::PARAM)
+        {
+            const int aggrLevel = Eval::get_aggression();
+            if (aggrLevel > 0)
+            {
+                Square oppKing  = pos.square<KING>(~us);
+                bool   kingProx  = (distance<Square>(move.to_sq(), oppKing) <= 2);
+                bool   sacrifice = capture && !pos.see_ge(move, 0);
+
+                if (kingProx)
+                    r -= aggrLevel * 512 / 100;
+
+                if (sacrifice)
+                    r -= aggrLevel * 512 / 100;
+            }
+        }
+        // ── End Solace LMR bonus ──────────────────────────────────────────────
+
         // Scale up reductions for expected ALL nodes
         if (allNode)
             r += r * 276 / (256 * depth + 254);
@@ -1416,6 +1479,24 @@ moves_loop:  // When in check, search starts here
                          ttData.move);
         if (!PvNode)
             ttMoveHistory << (bestMove == ttData.move ? 804 : -860);
+
+        // ── Solace: extra capture history bonus for king-proximity best moves ─
+        // Reinforces the engine's preference for aggression across games by
+        // boosting the history score of moves that both captured and landed
+        // close to the enemy king, specifically when mode=PARAM is active.
+        if (Eval::get_aggression_mode() == Eval::AggressionMode::PARAM
+            && Eval::get_aggression() > 0
+            && pos.capture_stage(bestMove))
+        {
+            Square oppKing = pos.square<KING>(~us);
+            if (distance<Square>(bestMove.to_sq(), oppKing) <= 2)
+            {
+                const int bonus = Eval::get_aggression() * depth * 8;
+                captureHistory[movedPiece][bestMove.to_sq()]
+                              [type_of(pos.piece_on(bestMove.to_sq()))] << bonus;
+            }
+        }
+        // ── End Solace history bonus ──────────────────────────────────────────
     }
 
     // Bonus for prior quiet countermove that caused the fail low
