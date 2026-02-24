@@ -23,6 +23,7 @@
 #include <utility>
 
 #include "bitboard.h"
+#include "evaluate.h"
 #include "misc.h"
 #include "position.h"
 
@@ -179,13 +180,39 @@ ExtMove* MovePicker::score(MoveList<Type>& ml) {
                 m.value += 8 * (*lowPlyHistory)[ply][m.raw()] / (1 + ply);
         }
 
-        else  // Type == EVASIONS
+        else if constexpr (Type == EVASIONS)
         {
             if (pos.capture_stage(m))
                 m.value = PieceValue[capturedPiece] + (1 << 28);
             else
                 m.value = (*mainHistory)[us][m.raw()] + (*continuationHistory[0])[pc][to];
         }
+
+        // ── Solace: king-proximity move ordering bonus ────────────────────────
+        // When mode=PARAM, boost the score of captures and quiets that land
+        // within Chebyshev-2 of the opponent king or deliver check.
+        // Applied after all type-specific scoring so it stacks cleanly.
+        // Scaled to sit just above the check bonus (16384) at level=100.
+        if constexpr (Type != EVASIONS)
+        {
+            if (Eval::get_aggression_mode() == Eval::AggressionMode::PARAM)
+            {
+                const int aggrLevel = Eval::get_aggression();
+                if (aggrLevel > 0)
+                {
+                    Square oppKing = pos.square<KING>(~us);
+                    int    dist    = distance<Square>(to, oppKing);
+                    // Proximity bonus: dist 0-1 → ×256, dist 2 → ×128
+                    if (dist <= 2)
+                        m.value += aggrLevel * (3 - dist) * 128;
+                    // Additional bonus for giving check (not already covered above)
+                    else if constexpr (Type == CAPTURES)
+                        if (pos.check_squares(pt) & to)
+                            m.value += aggrLevel * 64;
+                }
+            }
+        }
+        // ── End Solace move ordering bonus ───────────────────────────────────
     }
     return it;
 }
