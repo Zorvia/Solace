@@ -567,6 +567,31 @@ void Search::Worker::iterative_deepening() {
             double totalTime = mainThread->tm.optimum() * fallingEval * reduction
                              * bestMoveInstability * highBestMoveEffort;
 
+            // ── Solace: spend more time when the best move attacks the enemy king ─
+            // In PARAM mode, if the current root PV move lands within Chebyshev-2
+            // of the enemy king, multiply the allowed time budget by a factor
+            // proportional to aggrLevel.  This lets the engine dig deeper into
+            // attacking lines instead of cutting off at the normal horizon.
+            // At mode=Off or aggrLevel=0 this block is a no-op.
+            if (Eval::get_aggression_mode() == Eval::AggressionMode::PARAM
+                && !rootMoves.empty())
+            {
+                const int aggrLevel = Eval::get_aggression();
+                if (aggrLevel > 0)
+                {
+                    Move   bestRoot = rootMoves[0].pv[0];
+                    Square oppKing  = rootPos.square<KING>(~rootPos.side_to_move());
+                    if (bestRoot != Move::none()
+                        && distance<Square>(bestRoot.to_sq(), oppKing) <= 2)
+                    {
+                        // Scale from 1.0 (aggrLevel=0) up to 1.5 (aggrLevel=100).
+                        double kingAttackBonus = 1.0 + 0.5 * aggrLevel / 100.0;
+                        totalTime *= kingAttackBonus;
+                    }
+                }
+            }
+            // ── End Solace time extension ─────────────────────────────────────
+
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
                 totalTime = std::min(502.0, totalTime);
