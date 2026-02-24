@@ -450,7 +450,26 @@ void Search::Worker::iterative_deepening() {
                 else if (bestValue >= beta)
                 {
                     alpha = std::max(beta - delta, alpha);
-                    beta  = std::min(bestValue + delta, VALUE_INFINITE);
+
+                    // ── Solace: asymmetric fail-high window widening ──────────
+                    // In PARAM mode widen beta faster than baseline when we fail
+                    // high: multiply the upper expansion by (1 + aggrLevel/100).
+                    // At aggrLevel=75 beta expands 1.75× as fast as alpha on
+                    // each fail-high iteration, making the engine more willing
+                    // to confirm a promising line rather than cut it off.
+                    // Baseline delta/3 growth is preserved when mode=Off.
+                    Value betaExpansion;
+                    if (Eval::get_aggression_mode() == Eval::AggressionMode::PARAM)
+                    {
+                        const int aggrLevel = Eval::get_aggression();
+                        betaExpansion =
+                          std::min(bestValue + delta * (100 + aggrLevel) / 100, VALUE_INFINITE);
+                    }
+                    else
+                        betaExpansion = std::min(bestValue + delta, VALUE_INFINITE);
+
+                    beta = betaExpansion;
+                    // ── End Solace asymmetric window ──────────────────────────
                     ++failedHighCnt;
                 }
                 else
