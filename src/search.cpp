@@ -67,6 +67,21 @@ namespace {
 constexpr int SEARCHEDLIST_CAPACITY = 32;
 using SearchedList                  = ValueList<Move, SEARCHEDLIST_CAPACITY>;
 
+// ── Solace tunable aggression parameters ─────────────────────────────────────
+// These are registered as UCI spin options via the TUNE macro so they can be
+// optimised by Fishtest/SPSA without recompiling. At their default values they
+// reproduce the original hand-tuned behaviour. Set to 0 to disable each effect.
+//
+// Exposed as UCI options only when compiled with USE_TUNE (fishtest mode).
+// In production builds the values are baked in and read from these variables.
+int SolaceLmrKingProx  = 512;  // LMR discount for king-proximity moves (per 100 aggr)
+int SolaceLmrSacrifice = 512;  // LMR discount for SEE-negative captures (per 100 aggr)
+int SolaceHistBonus    = 8;    // Capture history bonus multiplier (aggr * depth * N)
+
+TUNE(SetRange(0, 1024), SolaceLmrKingProx, SolaceLmrSacrifice,
+     SetRange(0, 64),   SolaceHistBonus);
+// ── End Solace tunable parameters ─────────────────────────────────────────────
+
 // (*Scalers):
 // The values with Scaler asterisks have proven non-linear scaling.
 // They are optimized to time controls of 180 + 1.8 and longer,
@@ -1276,10 +1291,10 @@ moves_loop:  // When in check, search starts here
                 bool   sacrifice = capture && !pos.see_ge(move, 0);
 
                 if (kingProx)
-                    r -= aggrLevel * 512 / 100;
+                    r -= aggrLevel * SolaceLmrKingProx / 100;
 
                 if (sacrifice)
-                    r -= aggrLevel * 512 / 100;
+                    r -= aggrLevel * SolaceLmrSacrifice / 100;
             }
         }
         // ── End Solace LMR bonus ──────────────────────────────────────────────
@@ -1491,7 +1506,7 @@ moves_loop:  // When in check, search starts here
             Square oppKing = pos.square<KING>(~us);
             if (distance<Square>(bestMove.to_sq(), oppKing) <= 2)
             {
-                const int bonus = Eval::get_aggression() * depth * 8;
+                const int bonus = Eval::get_aggression() * depth * SolaceHistBonus;
                 captureHistory[movedPiece][bestMove.to_sq()]
                               [type_of(pos.piece_on(bestMove.to_sq()))] << bonus;
             }
