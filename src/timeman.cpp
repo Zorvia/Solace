@@ -23,7 +23,9 @@
 #include <cmath>
 #include <cstdint>
 
+#include "evaluate.h"
 #include "search.h"
+#include "tune.h"
 #include "ucioption.h"
 
 namespace Stockfish {
@@ -39,6 +41,21 @@ void TimeManagement::advance_nodes_time(std::int64_t nodes) {
     assert(useNodesTime);
     availableNodes = std::max(int64_t(0), availableNodes - nodes);
 }
+
+// ── Solace: time management scale parameters ──────────────────────────────────
+// Applied only when SolaceAggressionMode=Param; both are percentages (100 = 1.0x).
+// SolaceTmOptScale: scales optimumTime up when engine is in attacking mode.
+//   Range [80, 150]: 100 = baseline, 120 = 20% more optimum time for attacks.
+// SolaceTmMaxScale: scales maximumTime cap.
+//   Range [80, 150]: 100 = baseline.
+// Both are registered via TUNE for SPSA optimisation.
+namespace {
+int SolaceTmOptScale = 100;  // percentage; 100 = no change
+int SolaceTmMaxScale = 100;  // percentage; 100 = no change
+
+TUNE(SetRange(80, 150), SolaceTmOptScale, SolaceTmMaxScale);
+}
+// ── End Solace TM parameters ──────────────────────────────────────────────────
 
 // Called at the beginning of the search and calculates
 // the bounds of time allowed for the current game ply. We currently support:
@@ -135,6 +152,17 @@ void TimeManagement::init(Search::LimitsType& limits,
 
     if (options["Ponder"])
         optimumTime += optimumTime / 4;
+
+    // ── Solace: apply aggression time budget scaling ──────────────────────────
+    // When SolaceAggressionMode=Param, scale optimumTime and maximumTime by the
+    // SPSA-tunable SolaceTmOptScale / SolaceTmMaxScale percentages.
+    // At their default value of 100 the arithmetic is identical to baseline.
+    if (Eval::get_aggression_mode() == Eval::AggressionMode::PARAM)
+    {
+        optimumTime = optimumTime * SolaceTmOptScale / 100;
+        maximumTime = maximumTime * SolaceTmMaxScale / 100;
+    }
+    // ── End Solace TM scaling ─────────────────────────────────────────────────
 }
 
 }  // namespace Stockfish
