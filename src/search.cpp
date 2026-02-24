@@ -1773,7 +1773,22 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
             if (!givesCheck && move.to_sq() != prevSq && !is_loss(futilityBase)
                 && move.type_of() != PROMOTION)
             {
-                if (moveCount > 2)
+                // ── Solace: raise moveCount cap for king-proximity captures ───
+                // In PARAM mode, allow one extra capture per node when the
+                // destination square is adjacent to the enemy king — this keeps
+                // attacking sequences alive past the baseline moveCount=2 cutoff.
+                int moveCountCap = 2;
+                if (capture
+                    && Eval::get_aggression_mode() == Eval::AggressionMode::PARAM
+                    && Eval::get_aggression() > 0)
+                {
+                    Square oppKing = pos.square<KING>(~pos.side_to_move());
+                    if (distance<Square>(move.to_sq(), oppKing) <= 2)
+                        moveCountCap = 3;
+                }
+                // ── End Solace moveCount cap ──────────────────────────────────
+
+                if (moveCount > moveCountCap)
                     continue;
 
                 Value futilityValue = futilityBase + PieceValue[pos.piece_on(move.to_sq())];
@@ -1800,8 +1815,28 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta)
                 continue;
 
             // Do not search moves with bad enough SEE values
-            if (!pos.see_ge(move, -72))
-                continue;
+            // ── Solace: lower the SEE rejection floor for king-proximity captures
+            // In PARAM mode, sacrifices that land on or adjacent to the enemy
+            // king are worth exploring even if SEE is slightly negative.
+            // At aggrLevel=75 the floor drops by ~54 cp; max drop is 72 cp
+            // (doubling the baseline floor), preventing infinite regression.
+            {
+                int seeFloor = -72;
+                if (capture
+                    && Eval::get_aggression_mode() == Eval::AggressionMode::PARAM)
+                {
+                    const int agg = Eval::get_aggression();
+                    if (agg > 0)
+                    {
+                        Square oppKing = pos.square<KING>(~pos.side_to_move());
+                        if (distance<Square>(move.to_sq(), oppKing) <= 2)
+                            seeFloor -= agg * 72 / 100;
+                    }
+                }
+                // ── End Solace SEE floor ──────────────────────────────────────
+                if (!pos.see_ge(move, seeFloor))
+                    continue;
+            }
         }
 
         // Step 7. Make and search the move
