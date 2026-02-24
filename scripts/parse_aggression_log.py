@@ -100,7 +100,7 @@ def write_csv(records: List[AggrRecord], path: str) -> None:
         writer.writeheader()
         for r in records:
             writer.writerow(asdict(r))
-    print(f"[parse_aggression_log] Wrote {len(records)} rows to {path}")
+    print(f"[parse_aggression_log] Wrote {len(records)} rows to {path}", file=sys.stderr)
 
 
 def main() -> None:
@@ -130,7 +130,7 @@ def main() -> None:
         print("[parse_aggression_log] No solace_aggr lines found.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"[parse_aggression_log] Parsed {len(records)} solace_aggr records.")
+    print(f"[parse_aggression_log] Parsed {len(records)} solace_aggr records.", file=sys.stderr)
 
     summary = aggregate(records)
 
