@@ -132,6 +132,57 @@ jobs:
           echo "$out" | grep -q "uciok" || { echo "FAIL: engine crashed on bad net path"; exit 1; }
           echo "NNUE graceful-fail: PASS"
 
+  # ── Bench signature regression ───────────────────────────────────────────
+  # Captures the bench node count in mode=Off (baseline-identical).
+  # When SOLACE_BIG_NET / SOLACE_SMALL_NET secrets are set in the repo, the
+  # signature is compared against the pinned value in tests/solace_bench_sig.txt.
+  # Without nets the job exits 0 (SKIP) so CI still passes on fork builds.
+  bench-signature:
+    name: Bench signature
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install g++
+        run: sudo apt-get install -y g++
+
+      - name: Build
+        working-directory: src
+        run: |
+          EXTRACXXFLAGS="-DNNUE_EMBEDDING_OFF" make ARCH=x86-64 EXE=solace -j$(nproc)
+
+      - name: Run signature (nets via secrets, skipped if absent)
+        env:
+          SOLACE_BIG_NET:   ${{ secrets.SOLACE_BIG_NET_PATH }}
+          SOLACE_SMALL_NET: ${{ secrets.SOLACE_SMALL_NET_PATH }}
+        run: |
+          chmod +x tests/solace_signature.sh
+          # Exit 2 = SKIP is treated as success (no nets in CI)
+          bash tests/solace_signature.sh src/solace || CODE=$?
+          if [[ "${CODE:-0}" -eq 2 ]]; then
+            echo "Bench signature: SKIPPED (no nets)"
+            exit 0
+          fi
+          if [[ "${CODE:-0}" -ne 0 ]]; then exit "${CODE:-1}"; fi
+
+      - name: Compare against pinned signature (if file exists and nets present)
+        env:
+          SOLACE_BIG_NET:   ${{ secrets.SOLACE_BIG_NET_PATH }}
+          SOLACE_SMALL_NET: ${{ secrets.SOLACE_SMALL_NET_PATH }}
+        run: |
+          SIG_FILE="tests/solace_bench_sig.txt"
+          if [[ ! -f "$SIG_FILE" ]]; then
+            echo "No pinned signature file — skipping comparison."
+            exit 0
+          fi
+          REFERENCE="$(cat $SIG_FILE)"
+          bash tests/solace_signature.sh src/solace "$REFERENCE" || CODE=$?
+          if [[ "${CODE:-0}" -eq 2 ]]; then exit 0; fi
+          exit "${CODE:-0}"
+
   # ── Perft regression (requires net — skipped in no-net CI) ───────────────
   # Uncomment and add net secrets when nets are available in your repo:
   # perft:
